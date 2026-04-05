@@ -1,0 +1,189 @@
+window.MdReader = window.MdReader || {};
+
+window.MdReader.files = (function () {
+  var playlist = [];       // Array of { name, handle }
+  var currentIndex = -1;
+  var FILE_PATTERN = /\.(md|markdown|txt|text)$/i;
+
+  function handleFileSelect(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+
+    var ui = window.MdReader.ui;
+    file
+      .text()
+      .then(function (text) {
+        ui.elements.editor.value = text;
+        window.MdReader.markdown.renderToPreview();
+        ui.setStatus("Loaded: " + file.name);
+        ui.setEditorTitle("Markdown Source - " + file.name);
+      })
+      .catch(function () {
+        ui.setStatus("Failed to load file.");
+      });
+  }
+
+  function loadSampleMarkdown() {
+    var ui = window.MdReader.ui;
+    ui.elements.editor.value =
+      "# Sample Document\n\n" +
+      "This is a **simple markdown viewer** with browser TTS.\n\n" +
+      "## Features\n\n" +
+      "- Load a text or markdown file\n" +
+      "- Edit markdown directly\n" +
+      "- See rendered output\n" +
+      "- Read it aloud\n\n" +
+      "> This uses the browser speech engine.\n\n" +
+      "### Inline Example\n\n" +
+      "```javascript\nconst x = 42;\nconsole.log(x);\n```\n\n" +
+      "### Table Example\n\n" +
+      "| Feature | Status |\n" +
+      "| --- | --- |\n" +
+      "| Markdown | Done |\n" +
+      "| TTS | Done |\n" +
+      "| Folders | Coming soon |\n\n" +
+      "[GitHub](https://github.com)";
+    window.MdReader.markdown.renderToPreview();
+    ui.setEditorTitle("Markdown Source");
+    ui.setStatus("Sample loaded.");
+  }
+
+  function clearAll() {
+    var ui = window.MdReader.ui;
+    window.MdReader.tts.stopSpeech();
+    ui.elements.editor.value = "";
+    ui.elements.fileInput.value = "";
+    playlist = [];
+    currentIndex = -1;
+    ui.hidePlaylistPanel();
+    ui.setEditorTitle("Markdown Source");
+    ui.setProgress(0);
+    window.MdReader.markdown.renderToPreview();
+    ui.setStatus("Cleared.");
+  }
+
+  // --- Folder support ---
+
+  function folderSupported() {
+    return typeof window.showDirectoryPicker === "function";
+  }
+
+  function openFolder() {
+    var ui = window.MdReader.ui;
+
+    if (!folderSupported()) {
+      ui.setStatus("Folder support requires Chrome or Edge 86+. Use Open File instead.");
+      return;
+    }
+
+    window
+      .showDirectoryPicker()
+      .then(function (dirHandle) {
+        return collectFiles(dirHandle);
+      })
+      .then(function (files) {
+        if (!files.length) {
+          ui.setStatus("No .md or .txt files found in folder.");
+          return;
+        }
+
+        files.sort(function (a, b) {
+          return a.name.localeCompare(b.name);
+        });
+
+        playlist = files;
+        currentIndex = -1;
+
+        var names = files.map(function (f) {
+          return f.name;
+        });
+
+        ui.showPlaylist(names, function (index) {
+          loadPlaylistItem(index);
+        });
+
+        ui.setStatus("Loaded folder: " + files.length + " files.");
+        loadPlaylistItem(0);
+      })
+      .catch(function (err) {
+        if (err.name === "AbortError") return; // User cancelled
+        ui.setStatus("Failed to open folder: " + err.message);
+      });
+  }
+
+  function collectFiles(dirHandle) {
+    var files = [];
+    var iterator = dirHandle.values();
+
+    function next() {
+      return iterator.next().then(function (result) {
+        if (result.done) return files;
+        var entry = result.value;
+        if (entry.kind === "file" && FILE_PATTERN.test(entry.name)) {
+          files.push({ name: entry.name, handle: entry });
+        }
+        return next();
+      });
+    }
+
+    return next();
+  }
+
+  function loadPlaylistItem(index) {
+    if (index < 0 || index >= playlist.length) return;
+
+    var ui = window.MdReader.ui;
+    var item = playlist[index];
+    currentIndex = index;
+
+    ui.highlightPlaylistItem(index);
+    ui.setEditorTitle(item.name);
+
+    item.handle
+      .getFile()
+      .then(function (file) {
+        return file.text();
+      })
+      .then(function (text) {
+        ui.elements.editor.value = text;
+        window.MdReader.markdown.renderToPreview();
+        ui.setStatus("Loaded: " + item.name + " (" + (index + 1) + "/" + playlist.length + ")");
+      })
+      .catch(function () {
+        ui.setStatus("Failed to read: " + item.name);
+      });
+  }
+
+  function hasNext() {
+    return currentIndex < playlist.length - 1;
+  }
+
+  function advanceToNext() {
+    if (hasNext()) {
+      loadPlaylistItem(currentIndex + 1);
+      return true;
+    }
+    return false;
+  }
+
+  function getCurrentIndex() {
+    return currentIndex;
+  }
+
+  function getPlaylistLength() {
+    return playlist.length;
+  }
+
+  return {
+    handleFileSelect,
+    loadSampleMarkdown,
+    clearAll,
+    openFolder,
+    folderSupported,
+    loadPlaylistItem,
+    hasNext,
+    advanceToNext,
+    getCurrentIndex,
+    getPlaylistLength,
+  };
+})();

@@ -1,0 +1,286 @@
+window.MdReader = window.MdReader || {};
+
+window.MdReader.tts = (function () {
+  var voices = [];
+  var chunkQueue = [];
+  var chunkIndex = 0;
+  var totalChunks = 0;
+  var currentUtterance = null;
+  var keepAliveTimer = null;
+  var speaking = false;
+  var onFinishedCallback = null;
+
+  var PREMIUM_PATTERN = /Natural|Neural|Online|Premium|Enhanced/i;
+  var CHUNK_MAX = 200;
+
+  // --- Voice management ---
+
+  function isEnglish(voice) {
+    return voice.lang.startsWith("en");
+  }
+
+  function isPremium(voice) {
+    return PREMIUM_PATTERN.test(voice.name);
+  }
+
+  function loadVoices() {
+    var ui = window.MdReader.ui;
+    voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return;
+
+    var savedVoice = localStorage.getItem("mdreader-voice");
+    ui.elements.voiceSelect.innerHTML = "";
+
+    // Separate into premium and standard
+    var premium = [];
+    var standard = [];
+    voices.forEach(function (voice, index) {
+      var entry = { voice: voice, index: index };
+      if (isPremium(voice)) {
+        premium.push(entry);
+      } else {
+        standard.push(entry);
+      }
+    });
+
+    // Sort: English first within each group, then alphabetical
+    function sortVoices(arr) {
+      arr.sort(function (a, b) {
+        var aEn = isEnglish(a.voice) ? 0 : 1;
+        var bEn = isEnglish(b.voice) ? 0 : 1;
+        if (aEn !== bEn) return aEn - bEn;
+        return a.voice.name.localeCompare(b.voice.name);
+      });
+    }
+    sortVoices(premium);
+    sortVoices(standard);
+
+    function addGroup(label, entries) {
+      if (!entries.length) return;
+      var group = document.createElement("optgroup");
+      group.label = label;
+      entries.forEach(function (entry) {
+        var opt = document.createElement("option");
+        opt.value = String(entry.index);
+        opt.textContent = entry.voice.name + " (" + entry.voice.lang + ")";
+        group.appendChild(opt);
+      });
+      ui.elements.voiceSelect.appendChild(group);
+    }
+
+    addGroup("High Quality Voices", premium);
+    addGroup("Standard Voices", standard);
+
+    // Restore saved voice or auto-select best
+    var restored = false;
+    if (savedVoice) {
+      for (var i = 0; i < voices.length; i++) {
+        if (voices[i].name === savedVoice) {
+          ui.elements.voiceSelect.value = String(i);
+          restored = true;
+          break;
+        }
+      }
+    }
+    if (!restored) {
+      // Auto-select: first premium English, else first premium, else first English
+      var best =
+        premium.find(function (e) { return isEnglish(e.voice); }) ||
+        premium[0] ||
+        standard.find(function (e) { return isEnglish(e.voice); }) ||
+        standard[0];
+      if (best) ui.elements.voiceSelect.value = String(best.index);
+    }
+
+    // Restore saved rate
+    var savedRate = localStorage.getItem("mdreader-rate");
+    if (savedRate) {
+      ui.elements.rateInput.value = savedRate;
+      ui.setRateDisplay(savedRate);
+    }
+  }
+
+  function savePreferences() {
+    var ui = window.MdReader.ui;
+    var voice = voices[Number(ui.elements.voiceSelect.value)];
+    if (voice) localStorage.setItem("mdreader-voice", voice.name);
+    localStorage.setItem("mdreader-rate", ui.elements.rateInput.value);
+  }
+
+  // --- Text chunking ---
+
+  function chunkText(text) {
+    if (text.length <= CHUNK_MAX) return [text];
+
+    var chunks = [];
+    // Split on sentence boundaries first
+    var sentences = text.split(/(?<=[.!?])\s+/);
+    var current = "";
+
+    for (var i = 0; i < sentences.length; i++) {
+      var s = sentences[i];
+      if (current.length + s.length + 1 <= CHUNK_MAX) {
+        current = current ? current + " " + s : s;
+      } else {
+        if (current) chunks.push(current);
+        // If single sentence exceeds max, split at commas or words
+        if (s.length > CHUNK_MAX) {
+          var parts = s.split(/,\s*/);
+          var sub = "";
+          for (var j = 0; j < parts.length; j++) {
+            if (sub.length + parts[j].length + 2 <= CHUNK_MAX) {
+              sub = sub ? sub + ", " + parts[j] : parts[j];
+            } else {
+              if (sub) chunks.push(sub);
+              sub = parts[j];
+            }
+          }
+          current = sub;
+        } else {
+          current = s;
+        }
+      }
+    }
+    if (current) chunks.push(current);
+    return chunks;
+  }
+
+  // --- Chrome keep-alive workaround ---
+
+  function startKeepAlive() {
+    stopKeepAlive();
+    keepAliveTimer = setInterval(function () {
+      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+    }, 10000);
+  }
+
+  function stopKeepAlive() {
+    if (keepAliveTimer) {
+      clearInterval(keepAliveTimer);
+      keepAliveTimer = null;
+    }
+  }
+
+  // --- Speech control ---
+
+  function getReadableText() {
+    var ui = window.MdReader.ui;
+    return ui.elements.preview.innerText.trim() || ui.elements.editor.value.trim();
+  }
+
+  function stopSpeech() {
+    window.speechSynthesis.cancel();
+    stopKeepAlive();
+    chunkQueue = [];
+    chunkIndex = 0;
+    totalChunks = 0;
+    currentUtterance = null;
+    speaking = false;
+    window.MdReader.ui.setStatus("Speech stopped.");
+  }
+
+  function speakNextChunk() {
+    var ui = window.MdReader.ui;
+
+    if (chunkIndex >= chunkQueue.length) {
+      stopKeepAlive();
+      speaking = false;
+      ui.setStatus("Finished.");
+      if (onFinishedCallback) onFinishedCallback();
+      return;
+    }
+
+    var text = chunkQueue[chunkIndex];
+    var utterance = new SpeechSynthesisUtterance(text);
+
+    var voice = voices[Number(ui.elements.voiceSelect.value)];
+    if (voice) utterance.voice = voice;
+    utterance.rate = parseFloat(ui.elements.rateInput.value);
+
+    utterance.onstart = function () {
+      ui.setStatus("Speaking... (" + (chunkIndex + 1) + "/" + totalChunks + ")");
+    };
+    utterance.onpause = function () {
+      ui.setStatus("Paused. (" + (chunkIndex + 1) + "/" + totalChunks + ")");
+    };
+    utterance.onresume = function () {
+      ui.setStatus("Resumed. (" + (chunkIndex + 1) + "/" + totalChunks + ")");
+    };
+    utterance.onend = function () {
+      chunkIndex++;
+      speakNextChunk();
+    };
+    utterance.onerror = function (e) {
+      if (e.error === "canceled") return;
+      ui.setStatus("Speech error: " + e.error);
+      // Try next chunk on error
+      chunkIndex++;
+      speakNextChunk();
+    };
+
+    currentUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function speak() {
+    var ui = window.MdReader.ui;
+    var text = getReadableText();
+    if (!text) {
+      ui.setStatus("Nothing to read.");
+      return;
+    }
+
+    stopSpeech();
+    savePreferences();
+
+    chunkQueue = chunkText(text);
+    chunkIndex = 0;
+    totalChunks = chunkQueue.length;
+    speaking = true;
+
+    startKeepAlive();
+    speakNextChunk();
+  }
+
+  function pauseSpeech() {
+    if (window.speechSynthesis.speaking) {
+      stopKeepAlive();
+      window.speechSynthesis.pause();
+    }
+  }
+
+  function resumeSpeech() {
+    if (window.speechSynthesis.paused) {
+      startKeepAlive();
+      window.speechSynthesis.resume();
+    }
+  }
+
+  function isSpeaking() {
+    return speaking;
+  }
+
+  function setOnFinished(cb) {
+    onFinishedCallback = cb;
+  }
+
+  function getProgress() {
+    if (totalChunks === 0) return 0;
+    return chunkIndex / totalChunks;
+  }
+
+  return {
+    loadVoices,
+    speak,
+    stopSpeech,
+    pauseSpeech,
+    resumeSpeech,
+    savePreferences,
+    isSpeaking,
+    setOnFinished,
+    getProgress,
+  };
+})();

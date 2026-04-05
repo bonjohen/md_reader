@@ -1,0 +1,100 @@
+window.MdReader = window.MdReader || {};
+
+window.MdReader.ui = (function () {
+  var elements = {
+    editor: document.getElementById("editor"),
+    preview: document.getElementById("preview"),
+    statusEl: document.getElementById("status"),
+    fileInput: document.getElementById("fileInput"),
+    folderBtn: document.getElementById("folderBtn"),
+    sampleBtn: document.getElementById("sampleBtn"),
+    clearBtn: document.getElementById("clearBtn"),
+    speakBtn: document.getElementById("speakBtn"),
+    pauseBtn: document.getElementById("pauseBtn"),
+    resumeBtn: document.getElementById("resumeBtn"),
+    stopBtn: document.getElementById("stopBtn"),
+    voiceSelect: document.getElementById("voiceSelect"),
+    rateInput: document.getElementById("rateInput"),
+    rateValue: document.getElementById("rateValue"),
+    autoPlayToggle: document.getElementById("autoPlayToggle"),
+    playlistPanel: document.getElementById("playlistPanel"),
+    playlistList: document.getElementById("playlistList"),
+    playlistCloseBtn: document.getElementById("playlistCloseBtn"),
+    editorTitle: document.getElementById("editorTitle"),
+    progressFill: document.getElementById("progressFill"),
+  };
+
+  function setStatus(text) {
+    elements.statusEl.textContent = text;
+  }
+
+  function setRateDisplay(value) {
+    elements.rateValue.textContent = Number(value).toFixed(1);
+  }
+
+  function setProgress(fraction) {
+    elements.progressFill.style.width = Math.round(fraction * 100) + "%";
+  }
+
+  function setEditorTitle(text) {
+    elements.editorTitle.textContent = text;
+  }
+
+  // --- Playlist UI ---
+
+  function showPlaylist(files, onItemClick) {
+    elements.playlistList.innerHTML = "";
+    files.forEach(function (name, index) {
+      var item = document.createElement("div");
+      item.className = "playlist-item";
+      item.setAttribute("tabindex", "0");
+      item.innerHTML =
+        '<span class="file-icon">&#9834;</span>' +
+        '<span class="file-name">' + escapeText(name) + '</span>';
+      item.addEventListener("click", function () {
+        onItemClick(index);
+      });
+      item.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onItemClick(index);
+        }
+      });
+      elements.playlistList.appendChild(item);
+    });
+    elements.playlistPanel.classList.remove("hidden");
+  }
+
+  function highlightPlaylistItem(index) {
+    var items = elements.playlistList.querySelectorAll(".playlist-item");
+    items.forEach(function (item, i) {
+      item.classList.toggle("active", i === index);
+    });
+  }
+
+  function togglePlaylistPanel() {
+    elements.playlistPanel.classList.toggle("hidden");
+  }
+
+  function hidePlaylistPanel() {
+    elements.playlistPanel.classList.add("hidden");
+  }
+
+  function escapeText(text) {
+    var div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  return {
+    elements,
+    setStatus,
+    setRateDisplay,
+    setProgress,
+    setEditorTitle,
+    showPlaylist,
+    highlightPlaylistItem,
+    togglePlaylistPanel,
+    hidePlaylistPanel,
+  };
+})();

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markdown Viewer with TTS</title>
+<style>
+:root {
+  --bg: #101418;
+  --panel: #182028;
+  --panel2: #202a34;
+  --text: #e8edf2;
+  --muted: #a8b3be;
+  --border: #2c3947;
+  --accent: #6cb6ff;
+}
+
+* {
+  box-sizing: border-box;
+  }
+
+html, body {
+margin: 0;
+padding: 0;
+height: 100%;
+background: var(--bg);
+color: var(--text);
+font-family: Arial, sans-serif;
+}
+
+body {
+display: flex;
+flex-direction: column;
+}
+
+header {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+align-items: center;
+padding: 12px;
+background: var(--panel);
+border-bottom: 1px solid var(--border);
+}
+
+label, .small {
+font-size: 13px;
+color: var(--muted);
+}
+
+button, select, input[type="file"], input[type="range"] {
+background: var(--panel2);
+color: var(--text);
+border: 1px solid var(--border);
+border-radius: 6px;
+padding: 8px 10px;
+font-size: 14px;
+}
+
+button {
+cursor: pointer;
+}
+
+button:hover {
+border-color: var(--accent);
+}
+
+main {
+flex: 1;
+display: grid;
+grid-template-columns: 1fr 1fr;
+min-height: 0;
+}
+
+.panel {
+display: flex;
+flex-direction: column;
+min-height: 0;
+border-right: 1px solid var(--border);
+}
+
+.panel:last-child {
+border-right: none;
+}
+
+.panel-title {
+padding: 10px 14px;
+background: var(--panel);
+border-bottom: 1px solid var(--border);
+color: var(--muted);
+font-size: 13px;
+}
+
+textarea {
+flex: 1;
+width: 100%;
+resize: none;
+border: none;
+outline: none;
+padding: 16px;
+background: #0e1318;
+color: var(--text);
+font: 14px/1.5 Consolas, Monaco, monospace;
+}
+
+#preview {
+flex: 1;
+overflow: auto;
+padding: 24px;
+}
+
+#preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 {
+margin-top: 1.3em;
+margin-bottom: 0.5em;
+}
+
+#preview p, #preview li, #preview blockquote {
+line-height: 1.6;
+}
+
+#preview a {
+color: var(--accent);
+}
+
+#preview code {
+background: #161d24;
+padding: 2px 5px;
+border-radius: 4px;
+font-family: Consolas, Monaco, monospace;
+}
+
+#preview pre {
+background: #161d24;
+border: 1px solid var(--border);
+border-radius: 8px;
+padding: 12px;
+overflow: auto;
+}
+
+#preview blockquote {
+margin-left: 0;
+padding-left: 12px;
+border-left: 4px solid var(--accent);
+color: var(--muted);
+}
+
+#preview hr {
+border: none;
+border-top: 1px solid var(--border);
+margin: 20px 0;
+}
+
+#status {
+padding: 8px 12px;
+background: var(--panel);
+border-top: 1px solid var(--border);
+color: var(--muted);
+font-size: 13px;
+}
+
+.group {
+display: flex;
+align-items: center;
+gap: 8px;
+flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+main {
+grid-template-columns: 1fr;
+}
+
+.panel {
+border-right: none;
+border-bottom: 1px solid var(--border);
+}
+
+.panel:last-child {
+border-bottom: none;
+}
+} </style>
+
+</head>
+<body>
+<header>
+  <div class="group">
+    <input id="fileInput" type="file" accept=".md,.markdown,.txt,.text">
+    <button id="sampleBtn">Load Sample</button>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <div class="group">
+    <button id="speakBtn">Speak</button>
+    <button id="pauseBtn">Pause</button>
+    <button id="resumeBtn">Resume</button>
+    <button id="stopBtn">Stop</button>
+  </div>
+
+  <div class="group">
+    <label for="voiceSelect">Voice</label>
+    <select id="voiceSelect"></select>
+  </div>
+
+  <div class="group">
+    <label for="rateInput">Rate</label>
+    <input id="rateInput" type="range" min="0.5" max="2" step="0.1" value="1">
+    <span id="rateValue" class="small">1.0</span>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="panel-title">Markdown Source</div>
+    <textarea id="editor" placeholder="Paste markdown here or load a file."></textarea>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">Rendered Preview</div>
+    <div id="preview"></div>
+  </section>
+</main>
+
+<div id="status">Ready.</div>
+
+<script>
+const fileInput = document.getElementById("fileInput");
+const editor = document.getElementById("editor");
+const preview = document.getElementById("preview");
+const statusEl = document.getElementById("status");
+
+const sampleBtn = document.getElementById("sampleBtn");
+const clearBtn = document.getElementById("clearBtn");
+
+const speakBtn = document.getElementById("speakBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const resumeBtn = document.getElementById("resumeBtn");
+const stopBtn = document.getElementById("stopBtn");
+
+const voiceSelect = document.getElementById("voiceSelect");
+const rateInput = document.getElementById("rateInput");
+const rateValue = document.getElementById("rateValue");
+
+let voices = [];
+let currentUtterance = null;
+
+function setStatus(text) {
+  statusEl.textContent = text;
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function parseInline(text) {
+  let s = escapeHtml(text);
+
+  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+  s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  s = s.replace(/_([^_]+)_/g, "<em>$1</em>");
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+  return s;
+}
+
+function markdownToHtml(md) {
+  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+
+  let inCode = false;
+  let codeLines = [];
+  let inUl = false;
+  let inOl = false;
+  let paragraph = [];
+
+  function flushParagraph() {
+    if (paragraph.length) {
+      out.push("<p>" + parseInline(paragraph.join(" ")) + "</p>");
+      paragraph = [];
+    }
+  }
+
+  function closeLists() {
+    if (inUl) {
+      out.push("</ul>");
+      inUl = false;
+    }
+    if (inOl) {
+      out.push("</ol>");
+      inOl = false;
+    }
+  }
+
+  function flushAll() {
+    flushParagraph();
+    closeLists();
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (inCode) {
+      if (line.trim().startsWith("```")) {
+        out.push("<pre><code>" + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+
+````
+    codeLines = [];
+    inCode = false;
+  } else {
+    codeLines.push(line);
+  }
+  continue;
+}
+
+if (line.trim().startsWith("```")) {
+  flushAll();
+  inCode = true;
+  codeLines = [];
+  continue;
+}
+
+if (/^\s*$/.test(line)) {
+  flushAll();
+  continue;
+}
+
+if (/^\s*---+\s*$/.test(line) || /^\s*\*\*\*+\s*$/.test(line)) {
+  flushAll();
+  out.push("<hr>");
+  continue;
+}
+
+const heading = line.match(/^(#{1,6})\s+(.*)$/);
+if (heading) {
+  flushAll();
+  const level = heading[1].length;
+  out.push("<h" + level + ">" + parseInline(heading[2].trim()) + "</h" + level + ">");
+  continue;
+}
+
+const blockquote = line.match(/^>\s?(.*)$/);
+if (blockquote) {
+  flushAll();
+  out.push("<blockquote>" + parseInline(blockquote[1]) + "</blockquote>");
+  continue;
+}
+
+const ulItem = line.match(/^\s*[-*+]\s+(.*)$/);
+if (ulItem) {
+  flushParagraph();
+  if (inOl) {
+    out.push("</ol>");
+    inOl = false;
+  }
+  if (!inUl) {
+    out.push("<ul>");
+    inUl = true;
+  }
+  out.push("<li>" + parseInline(ulItem[1]) + "</li>");
+  continue;
+}
+
+const olItem = line.match(/^\s*\d+\.\s+(.*)$/);
+if (olItem) {
+  flushParagraph();
+  if (inUl) {
+    out.push("</ul>");
+    inUl = false;
+  }
+  if (!inOl) {
+    out.push("<ol>");
+    inOl = true;
+  }
+  out.push("<li>" + parseInline(olItem[1]) + "</li>");
+  continue;
+}
+
+closeLists();
+paragraph.push(line.trim());
+````
+
+}
+
+flushAll();
+
+if (inCode) {
+out.push("<pre><code>" + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+}
+
+return out.join("\n");
+}
+
+function render() {
+preview.innerHTML = markdownToHtml(editor.value || "");
+}
+
+function loadVoices() {
+voices = window.speechSynthesis.getVoices();
+const currentValue = voiceSelect.value;
+voiceSelect.innerHTML = "";
+
+voices.forEach((voice, index) => {
+const option = document.createElement("option");
+option.value = String(index);
+option.textContent = voice.name + " (" + voice.lang + ")" + (voice.default ? " - default" : "");
+voiceSelect.appendChild(option);
+});
+
+if (voices.length && currentValue && currentValue < String(voices.length)) {
+voiceSelect.value = currentValue;
+}
+}
+
+function getReadableText() {
+return preview.innerText.trim() || editor.value.trim();
+}
+
+function stopSpeech() {
+window.speechSynthesis.cancel();
+currentUtterance = null;
+setStatus("Speech stopped.");
+}
+
+function speak() {
+const text = getReadableText();
+if (!text) {
+setStatus("Nothing to read.");
+return;
+}
+
+stopSpeech();
+
+const utterance = new SpeechSynthesisUtterance(text);
+const voice = voices[Number(voiceSelect.value)];
+if (voice) utterance.voice = voice;
+utterance.rate = parseFloat(rateInput.value);
+
+utterance.onstart = function() {
+setStatus("Speaking...");
+};
+utterance.onpause = function() {
+setStatus("Paused.");
+};
+utterance.onresume = function() {
+setStatus("Resumed.");
+};
+utterance.onend = function() {
+setStatus("Finished.");
+};
+utterance.onerror = function(e) {
+setStatus("Speech error: " + e.error);
+};
+
+currentUtterance = utterance;
+window.speechSynthesis.speak(utterance);
+}
+
+fileInput.addEventListener("change", async function(event) {
+const file = event.target.files[0];
+if (!file) return;
+
+try {
+const text = await file.text();
+editor.value = text;
+render();
+setStatus("Loaded: " + file.name);
+} catch (err) {
+setStatus("Failed to load file.");
+}
+});
+
+editor.addEventListener("input", render);
+
+sampleBtn.addEventListener("click", function() {
+editor.value =
+"# Sample Document\n\n" +
+"This is a **simple markdown viewer** with browser TTS.\n\n" +
+"## Features\n\n" +
+"- Load a text or markdown file\n" +
+"- Edit markdown directly\n" +
+"- See rendered output\n" +
+"- Read it aloud\n\n" +
+"> This uses the browser speech engine.\n\n" +
+"### Inline Example\n\n" +
+"`const x = 42;`\n\n" +
+"[OpenAI](https://openai.com)";
+render();
+setStatus("Sample loaded.");
+});
+
+clearBtn.addEventListener("click", function() {
+stopSpeech();
+editor.value = "";
+fileInput.value = "";
+render();
+setStatus("Cleared.");
+});
+
+speakBtn.addEventListener("click", speak);
+
+pauseBtn.addEventListener("click", function() {
+if (window.speechSynthesis.speaking) {
+window.speechSynthesis.pause();
+}
+});
+
+resumeBtn.addEventListener("click", function() {
+if (window.speechSynthesis.paused) {
+window.speechSynthesis.resume();
+}
+});
+
+stopBtn.addEventListener("click", stopSpeech);
+
+rateInput.addEventListener("input", function() {
+rateValue.textContent = Number(rateInput.value).toFixed(1);
+});
+
+window.speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+render(); </script>
+
+</body>
+</html>

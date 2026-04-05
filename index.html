@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MD Reader</title>
+
+  <!-- Highlight.js theme -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github-dark.min.css">
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Highlight.js -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+
+  <!-- Marked.js + highlight extension -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked-highlight/lib/index.umd.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="group">
+    <label class="file-input-label">
+      Open File
+      <input id="fileInput" type="file" accept=".md,.markdown,.txt,.text">
+    </label>
+    <button id="folderBtn">Open Folder</button>
+    <button id="sampleBtn">Load Sample</button>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <div class="group">
+    <button id="speakBtn">Speak</button>
+    <button id="pauseBtn">Pause</button>
+    <button id="resumeBtn">Resume</button>
+    <button id="stopBtn">Stop</button>
+    <label class="auto-play-label">
+      <input id="autoPlayToggle" type="checkbox"> Auto-play
+    </label>
+  </div>
+
+  <div class="group">
+    <label for="voiceSelect">Voice</label>
+    <select id="voiceSelect"></select>
+  </div>
+
+  <div class="group">
+    <label for="rateInput">Rate</label>
+    <input id="rateInput" type="range" min="0.5" max="2" step="0.1" value="1">
+    <span id="rateValue" class="small">1.0</span>
+  </div>
+</header>
+
+<!-- Progress bar -->
+<div id="progressBar"><div id="progressFill"></div></div>
+
+<div id="appLayout">
+  <!-- Playlist sidebar (hidden by default) -->
+  <aside id="playlistPanel" class="hidden">
+    <div class="playlist-header">
+      <span class="playlist-title">Playlist</span>
+      <button id="playlistCloseBtn" class="playlist-close">&times;</button>
+    </div>
+    <div id="playlistList"></div>
+  </aside>
+
+  <main>
+    <section class="panel">
+      <div class="panel-title" id="editorTitle">Markdown Source</div>
+      <textarea id="editor" placeholder="Paste markdown here or load a file."></textarea>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">Rendered Preview</div>
+      <div id="preview"></div>
+    </section>
+  </main>
+</div>
+
+<div id="status" role="status" aria-live="polite">Ready.</div>
+
+<!-- App scripts (order matters) -->
+<script src="js/ui.js"></script>
+<script src="js/markdown.js"></script>
+<script src="js/tts.js"></script>
+<script src="js/files.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
