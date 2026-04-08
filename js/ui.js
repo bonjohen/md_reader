@@ -7,6 +7,7 @@ window.MdReader.ui = (function () {
     statusEl: document.getElementById("status"),
     fileInput: document.getElementById("fileInput"),
     folderBtn: document.getElementById("folderBtn"),
+    tastyBtn: document.getElementById("tastyBtn"),
     sampleBtn: document.getElementById("sampleBtn"),
     clearBtn: document.getElementById("clearBtn"),
     speakBtn: document.getElementById("speakBtn"),

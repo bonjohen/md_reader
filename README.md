@@ -58,7 +58,7 @@ Folder playback requires the File System Access API (Chrome/Edge 86+). Other bro
 ## Project Structure
 
 ```
-md_reader/
+mdreader/
   index.html        # Page structure and CDN links
   css/
     style.css       # Dark theme, layout, playlist sidebar, responsive

@@ -13,6 +13,7 @@ window.MdReader = window.MdReader || {};
   // File operations
   el.fileInput.addEventListener("change", files.handleFileSelect);
   el.folderBtn.addEventListener("click", files.openFolder);
+  el.tastyBtn.addEventListener("click", files.loadTasty);
   el.sampleBtn.addEventListener("click", files.loadSampleMarkdown);
   el.clearBtn.addEventListener("click", files.clearAll);
 

@@ -1,7 +1,7 @@
 window.MdReader = window.MdReader || {};
 
 window.MdReader.files = (function () {
-  var playlist = [];       // Array of { name, handle }
+  var playlist = [];       // Array of { name, load: () => Promise<string> }
   var currentIndex = -1;
   var FILE_PATTERN = /\.(md|markdown|txt|text)$/i;
 
@@ -120,13 +120,74 @@ window.MdReader.files = (function () {
         if (result.done) return files;
         var entry = result.value;
         if (entry.kind === "file" && FILE_PATTERN.test(entry.name)) {
-          files.push({ name: entry.name, handle: entry });
+          files.push({
+            name: entry.name,
+            load: (function (handle) {
+              return function () {
+                return handle.getFile().then(function (f) { return f.text(); });
+              };
+            })(entry),
+          });
         }
         return next();
       });
     }
 
     return next();
+  }
+
+  // --- Built-in book support (manifest-driven) ---
+
+  function loadBookFromManifest(manifestUrl) {
+    var ui = window.MdReader.ui;
+
+    ui.setStatus("Loading book...");
+
+    fetch(manifestUrl)
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (manifest) {
+        var basePath = manifest.basePath || "";
+        var items = manifest.chapters.map(function (ch) {
+          var url = basePath + ch.file;
+          return {
+            name: ch.title || ch.file,
+            load: (function (chapterUrl) {
+              return function () {
+                return fetch(chapterUrl).then(function (res) {
+                  if (!res.ok) throw new Error("HTTP " + res.status);
+                  return res.text();
+                });
+              };
+            })(url),
+          };
+        });
+
+        if (!items.length) {
+          ui.setStatus("Book manifest is empty.");
+          return;
+        }
+
+        playlist = items;
+        currentIndex = -1;
+
+        ui.showPlaylist(
+          items.map(function (i) { return i.name; }),
+          function (index) { loadPlaylistItem(index); }
+        );
+
+        ui.setStatus("Loaded book: " + manifest.title + " (" + items.length + " chapters).");
+        loadPlaylistItem(0);
+      })
+      .catch(function (err) {
+        ui.setStatus("Failed to load book: " + err.message);
+      });
+  }
+
+  function loadTasty() {
+    loadBookFromManifest("docs/tasty/manifest.json");
   }
 
   function loadPlaylistItem(index) {
@@ -139,18 +200,15 @@ window.MdReader.files = (function () {
     ui.highlightPlaylistItem(index);
     ui.setEditorTitle(item.name);
 
-    item.handle
-      .getFile()
-      .then(function (file) {
-        return file.text();
-      })
+    item
+      .load()
       .then(function (text) {
         ui.elements.editor.value = text;
         window.MdReader.markdown.renderToPreview();
         ui.setStatus("Loaded: " + item.name + " (" + (index + 1) + "/" + playlist.length + ")");
       })
-      .catch(function () {
-        ui.setStatus("Failed to read: " + item.name);
+      .catch(function (err) {
+        ui.setStatus("Failed to read: " + item.name + (err && err.message ? " (" + err.message + ")" : ""));
       });
   }
 
@@ -180,6 +238,8 @@ window.MdReader.files = (function () {
     clearAll,
     openFolder,
     folderSupported,
+    loadBookFromManifest,
+    loadTasty,
     loadPlaylistItem,
     hasNext,
     advanceToNext,
