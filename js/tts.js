@@ -9,6 +9,7 @@ window.MdReader.tts = (function () {
   var keepAliveTimer = null;
   var speaking = false;
   var onFinishedCallback = null;
+  var wakeLock = null;
 
   var PREMIUM_PATTERN = /Natural|Neural|Online|Premium|Enhanced/i;
   // Android Chrome has different TTS quirks than desktop Chrome:
@@ -155,6 +156,40 @@ window.MdReader.tts = (function () {
     return chunks;
   }
 
+  // --- Screen wake lock ---
+  // Keeps the device screen from auto-locking while speech is playing.
+  // Cannot prevent a manual power-button lock — that's a hard browser
+  // limitation: when the screen is actually locked, the page is suspended
+  // and Web Speech stops. Wake lock auto-releases on visibility change,
+  // so we re-acquire when the page becomes visible again while speaking.
+
+  function acquireWakeLock() {
+    if (!("wakeLock" in navigator)) return;
+    if (wakeLock) return;
+    navigator.wakeLock
+      .request("screen")
+      .then(function (lock) {
+        wakeLock = lock;
+        lock.addEventListener("release", function () {
+          if (wakeLock === lock) wakeLock = null;
+        });
+      })
+      .catch(function () { /* ignored — wake lock is best-effort */ });
+  }
+
+  function releaseWakeLock() {
+    if (!wakeLock) return;
+    var lock = wakeLock;
+    wakeLock = null;
+    lock.release().catch(function () {});
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && speaking) {
+      acquireWakeLock();
+    }
+  });
+
   // --- Chrome keep-alive workaround ---
 
   function startKeepAlive() {
@@ -184,13 +219,14 @@ window.MdReader.tts = (function () {
   }
 
   function stopSpeech() {
+    speaking = false;
     window.speechSynthesis.cancel();
     stopKeepAlive();
+    releaseWakeLock();
     chunkQueue = [];
     chunkIndex = 0;
     totalChunks = 0;
     currentUtterance = null;
-    speaking = false;
     window.MdReader.ui.setStatus("Speech stopped.");
   }
 
@@ -199,6 +235,7 @@ window.MdReader.tts = (function () {
 
     if (chunkIndex >= chunkQueue.length) {
       stopKeepAlive();
+      releaseWakeLock();
       speaking = false;
       ui.setStatus("Finished.");
       if (onFinishedCallback) onFinishedCallback();
@@ -261,6 +298,7 @@ window.MdReader.tts = (function () {
     totalChunks = chunkQueue.length;
     speaking = true;
 
+    acquireWakeLock();
     startKeepAlive();
     speakNextChunk();
   }
