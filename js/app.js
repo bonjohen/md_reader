@@ -35,18 +35,15 @@ window.MdReader = window.MdReader || {};
   // Voice selection persistence
   el.voiceSelect.addEventListener("change", tts.savePreferences);
 
-  // Auto-advance: when TTS finishes a file and auto-play is on, load next file and speak
+  // Auto-advance: when TTS finishes a file and auto-play is on, load next file and speak.
+  // Chained on the load promise so we never speak stale editor content (race that
+  // caused the same chapter to replay when fetch was slower than the fixed delay).
   tts.setOnFinished(function () {
     ui.setProgress(1);
     if (el.autoPlayToggle.checked && files.hasNext()) {
-      // Small delay so UI updates before starting next file
-      setTimeout(function () {
-        files.advanceToNext();
-        // Wait for file to load before speaking
-        setTimeout(function () {
-          tts.speak();
-        }, 300);
-      }, 500);
+      files.advanceToNext().then(function (loaded) {
+        if (loaded) tts.speak();
+      });
     }
   });
 

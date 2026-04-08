@@ -191,7 +191,7 @@ window.MdReader.files = (function () {
   }
 
   function loadPlaylistItem(index) {
-    if (index < 0 || index >= playlist.length) return;
+    if (index < 0 || index >= playlist.length) return Promise.resolve(false);
 
     var ui = window.MdReader.ui;
     var item = playlist[index];
@@ -200,15 +200,17 @@ window.MdReader.files = (function () {
     ui.highlightPlaylistItem(index);
     ui.setEditorTitle(item.name);
 
-    item
+    return item
       .load()
       .then(function (text) {
         ui.elements.editor.value = text;
         window.MdReader.markdown.renderToPreview();
         ui.setStatus("Loaded: " + item.name + " (" + (index + 1) + "/" + playlist.length + ")");
+        return true;
       })
       .catch(function (err) {
         ui.setStatus("Failed to read: " + item.name + (err && err.message ? " (" + err.message + ")" : ""));
+        return false;
       });
   }
 
@@ -218,10 +220,9 @@ window.MdReader.files = (function () {
 
   function advanceToNext() {
     if (hasNext()) {
-      loadPlaylistItem(currentIndex + 1);
-      return true;
+      return loadPlaylistItem(currentIndex + 1);
     }
-    return false;
+    return Promise.resolve(false);
   }
 
   function getCurrentIndex() {

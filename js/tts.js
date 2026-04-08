@@ -8,6 +8,7 @@ window.MdReader.tts = (function () {
   var currentUtterance = null;
   var keepAliveTimer = null;
   var speaking = false;
+  var paused = false;
   var onFinishedCallback = null;
   var wakeLock = null;
 
@@ -220,6 +221,7 @@ window.MdReader.tts = (function () {
 
   function stopSpeech() {
     speaking = false;
+    paused = false;
     window.speechSynthesis.cancel();
     stopKeepAlive();
     releaseWakeLock();
@@ -259,6 +261,8 @@ window.MdReader.tts = (function () {
       ui.setStatus("Resumed. (" + (chunkIndex + 1) + "/" + totalChunks + ")");
     };
     utterance.onend = function () {
+      // Suppress advance if a pause cancelled us, or stopSpeech ran.
+      if (paused || !speaking) return;
       chunkIndex++;
       if (NEXT_CHUNK_DELAY_MS > 0) {
         setTimeout(speakNextChunk, NEXT_CHUNK_DELAY_MS);
@@ -268,6 +272,7 @@ window.MdReader.tts = (function () {
     };
     utterance.onerror = function (e) {
       if (e.error === "canceled" || e.error === "interrupted") return;
+      if (paused || !speaking) return;
       ui.setStatus("Speech error: " + e.error);
       // Try next chunk on error
       chunkIndex++;
@@ -297,6 +302,7 @@ window.MdReader.tts = (function () {
     chunkIndex = 0;
     totalChunks = chunkQueue.length;
     speaking = true;
+    paused = false;
 
     acquireWakeLock();
     startKeepAlive();
@@ -304,14 +310,30 @@ window.MdReader.tts = (function () {
   }
 
   function pauseSpeech() {
-    if (window.speechSynthesis.speaking) {
+    if (!speaking || paused) return;
+    paused = true;
+    var ui = window.MdReader.ui;
+    if (IS_ANDROID) {
+      // Android Chrome's pause() halts speech but resume() doesn't restart
+      // it. Fake pause by cancelling — onerror sees "canceled" and bails
+      // without advancing because `paused` is set. Resume re-speaks the
+      // current chunk from its start.
+      window.speechSynthesis.cancel();
+      ui.setStatus("Paused. (" + (chunkIndex + 1) + "/" + totalChunks + ")");
+    } else {
       stopKeepAlive();
       window.speechSynthesis.pause();
     }
   }
 
   function resumeSpeech() {
-    if (window.speechSynthesis.paused) {
+    if (!speaking || !paused) return;
+    paused = false;
+    if (IS_ANDROID) {
+      // Re-speak the current chunk from the start (no way to know intra-
+      // chunk position with Web Speech).
+      speakNextChunk();
+    } else {
       startKeepAlive();
       window.speechSynthesis.resume();
     }
