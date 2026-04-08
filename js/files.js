@@ -62,6 +62,31 @@ window.MdReader.files = (function () {
     ui.setStatus("Cleared.");
   }
 
+  function pasteFromClipboard() {
+    var ui = window.MdReader.ui;
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      ui.setStatus("Clipboard access not available in this browser.");
+      return;
+    }
+    navigator.clipboard.readText()
+      .then(function (text) {
+        if (!text) {
+          ui.setStatus("Clipboard is empty.");
+          return;
+        }
+        playlist = [];
+        currentIndex = -1;
+        ui.hidePlaylistPanel();
+        ui.elements.editor.value = text;
+        window.MdReader.markdown.renderToPreview();
+        ui.setEditorTitle("Pasted Text");
+        ui.setStatus("Pasted " + text.length + " characters from clipboard.");
+      })
+      .catch(function (err) {
+        ui.setStatus("Failed to read clipboard: " + (err && err.message ? err.message : err));
+      });
+  }
+
   // --- Folder support ---
 
   function folderSupported() {
@@ -237,6 +262,7 @@ window.MdReader.files = (function () {
     handleFileSelect,
     loadSampleMarkdown,
     clearAll,
+    pasteFromClipboard,
     openFolder,
     folderSupported,
     loadBookFromManifest,

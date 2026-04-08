@@ -90,9 +90,12 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 
 main {
   flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   min-height: 0;
+}
+
+main > .panel {
+  flex: 1;
 }
 
 /* --- Panels --- */
@@ -344,10 +347,6 @@ textarea {
 /* --- Responsive --- */
 
 @media (max-width: 900px) {
-  main {
-    grid-template-columns: 1fr;
-  }
-
   .panel {
     border-right: none;
     border-bottom: 1px solid var(--border);

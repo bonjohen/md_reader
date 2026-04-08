@@ -22,14 +22,8 @@
 
 <header>
   <div class="group">
-    <label class="file-input-label">
-      Open File
-      <input id="fileInput" type="file" accept=".md,.markdown,.txt,.text">
-    </label>
-    <button id="folderBtn">Open Folder</button>
-    <button id="tastyBtn">Tasty</button>
-    <button id="sampleBtn">Load Sample</button>
-    <button id="clearBtn">Clear</button>
+    <button id="pasteBtn">Paste</button>
+    <button id="loadBtn">Load...</button>
   </div>
 
   <div class="group">
@@ -69,14 +63,10 @@
 
   <main>
     <section class="panel">
-      <div class="panel-title" id="editorTitle">Markdown Source</div>
-      <textarea id="editor" placeholder="Paste markdown here or load a file."></textarea>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title">Rendered Preview</div>
+      <div class="panel-title" id="editorTitle">Rendered Preview</div>
       <div id="preview"></div>
     </section>
+    <textarea id="editor" hidden></textarea>
   </main>
 </div>
 

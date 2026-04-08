@@ -11,11 +11,8 @@ window.MdReader = window.MdReader || {};
   el.editor.addEventListener("input", md.renderToPreview);
 
   // File operations
-  el.fileInput.addEventListener("change", files.handleFileSelect);
-  el.folderBtn.addEventListener("click", files.openFolder);
-  el.tastyBtn.addEventListener("click", files.loadTasty);
-  el.sampleBtn.addEventListener("click", files.loadSampleMarkdown);
-  el.clearBtn.addEventListener("click", files.clearAll);
+  el.pasteBtn.addEventListener("click", files.pasteFromClipboard);
+  el.loadBtn.addEventListener("click", files.openFolder);
 
   // Playlist sidebar close
   el.playlistCloseBtn.addEventListener("click", ui.hidePlaylistPanel);
@@ -58,10 +55,10 @@ window.MdReader = window.MdReader || {};
   window.speechSynthesis.onvoiceschanged = tts.loadVoices;
   tts.loadVoices();
 
-  // Disable folder button if not supported
+  // Disable load button if folder picker is not supported
   if (!files.folderSupported()) {
-    el.folderBtn.title = "Requires Chrome or Edge 86+";
-    el.folderBtn.style.opacity = "0.5";
+    el.loadBtn.title = "Requires Chrome or Edge 86+";
+    el.loadBtn.style.opacity = "0.5";
   }
 
   // Initial render
