@@ -20,7 +20,29 @@ window.MdReader.ui = (function () {
     playlistCloseBtn: document.getElementById("playlistCloseBtn"),
     editorTitle: document.getElementById("editorTitle"),
     progressFill: document.getElementById("progressFill"),
+    bookDialog: document.getElementById("bookDialog"),
+    bookDialogList: document.getElementById("bookDialogList"),
   };
+
+  function showBookDialog(books, onPick) {
+    elements.bookDialogList.innerHTML = "";
+    books.forEach(function (book) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "book-dialog-item";
+      btn.textContent = book.title;
+      btn.addEventListener("click", function () {
+        elements.bookDialog.close();
+        onPick(book);
+      });
+      elements.bookDialogList.appendChild(btn);
+    });
+    if (typeof elements.bookDialog.showModal === "function") {
+      elements.bookDialog.showModal();
+    } else {
+      elements.bookDialog.setAttribute("open", "");
+    }
+  }
 
   function setStatus(text) {
     elements.statusEl.textContent = text;
@@ -94,5 +116,6 @@ window.MdReader.ui = (function () {
     highlightPlaylistItem,
     togglePlaylistPanel,
     hidePlaylistPanel,
+    showBookDialog,
   };
 })();

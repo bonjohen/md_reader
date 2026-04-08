@@ -72,6 +72,16 @@
 
 <div id="status" role="status" aria-live="polite">Ready.</div>
 
+<dialog id="bookDialog">
+  <form method="dialog" class="book-dialog-form">
+    <div class="book-dialog-title">Choose a Book</div>
+    <div id="bookDialogList"></div>
+    <menu class="book-dialog-actions">
+      <button value="cancel">Cancel</button>
+    </menu>
+  </form>
+</dialog>
+
 <!-- App scripts (order matters) -->
 <script src="js/ui.js"></script>
 <script src="js/markdown.js"></script>

@@ -215,6 +215,18 @@ window.MdReader.files = (function () {
     loadBookFromManifest("docs/tasty/manifest.json");
   }
 
+  // Registry of available books. Add more entries here as new books are added.
+  var AVAILABLE_BOOKS = [
+    { title: "Tasty", manifest: "docs/tasty/manifest.json" },
+  ];
+
+  function openBookPicker() {
+    var ui = window.MdReader.ui;
+    ui.showBookDialog(AVAILABLE_BOOKS, function (book) {
+      loadBookFromManifest(book.manifest);
+    });
+  }
+
   function loadPlaylistItem(index) {
     if (index < 0 || index >= playlist.length) return Promise.resolve(false);
 
@@ -267,6 +279,7 @@ window.MdReader.files = (function () {
     folderSupported,
     loadBookFromManifest,
     loadTasty,
+    openBookPicker,
     loadPlaylistItem,
     hasNext,
     advanceToNext,

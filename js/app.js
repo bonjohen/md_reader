@@ -12,7 +12,7 @@ window.MdReader = window.MdReader || {};
 
   // File operations
   el.pasteBtn.addEventListener("click", files.pasteFromClipboard);
-  el.loadBtn.addEventListener("click", files.openFolder);
+  el.loadBtn.addEventListener("click", files.openBookPicker);
 
   // Playlist sidebar close
   el.playlistCloseBtn.addEventListener("click", ui.hidePlaylistPanel);
@@ -55,11 +55,6 @@ window.MdReader = window.MdReader || {};
   window.speechSynthesis.onvoiceschanged = tts.loadVoices;
   tts.loadVoices();
 
-  // Disable load button if folder picker is not supported
-  if (!files.folderSupported()) {
-    el.loadBtn.title = "Requires Chrome or Edge 86+";
-    el.loadBtn.style.opacity = "0.5";
-  }
 
   // Initial render
   md.renderToPreview();
