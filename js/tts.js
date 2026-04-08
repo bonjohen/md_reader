@@ -11,7 +11,17 @@ window.MdReader.tts = (function () {
   var onFinishedCallback = null;
 
   var PREMIUM_PATTERN = /Natural|Neural|Online|Premium|Enhanced/i;
-  var CHUNK_MAX = 200;
+  // Android Chrome has different TTS quirks than desktop Chrome:
+  //  - The pause/resume keep-alive hack (a desktop-Chrome workaround for the
+  //    15s cutoff) actively breaks Android: pause() can permanently stop the
+  //    utterance and resume() may not restart it.
+  //  - Calling speak() synchronously inside onend is racy on Android; the
+  //    engine needs a small delay before accepting the next utterance.
+  //  - The desktop 15s cutoff doesn't apply, so smaller chunks just create
+  //    more transition points where Android can drop speech.
+  var IS_ANDROID = /Android/i.test(navigator.userAgent);
+  var CHUNK_MAX = IS_ANDROID ? 500 : 200;
+  var NEXT_CHUNK_DELAY_MS = IS_ANDROID ? 80 : 0;
 
   // --- Voice management ---
 
@@ -149,6 +159,8 @@ window.MdReader.tts = (function () {
 
   function startKeepAlive() {
     stopKeepAlive();
+    // Android: skip the pause/resume hack — it permanently stops speech there.
+    if (IS_ANDROID) return;
     keepAliveTimer = setInterval(function () {
       if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
         window.speechSynthesis.pause();
@@ -211,14 +223,22 @@ window.MdReader.tts = (function () {
     };
     utterance.onend = function () {
       chunkIndex++;
-      speakNextChunk();
+      if (NEXT_CHUNK_DELAY_MS > 0) {
+        setTimeout(speakNextChunk, NEXT_CHUNK_DELAY_MS);
+      } else {
+        speakNextChunk();
+      }
     };
     utterance.onerror = function (e) {
-      if (e.error === "canceled") return;
+      if (e.error === "canceled" || e.error === "interrupted") return;
       ui.setStatus("Speech error: " + e.error);
       // Try next chunk on error
       chunkIndex++;
-      speakNextChunk();
+      if (NEXT_CHUNK_DELAY_MS > 0) {
+        setTimeout(speakNextChunk, NEXT_CHUNK_DELAY_MS);
+      } else {
+        speakNextChunk();
+      }
     };
 
     currentUtterance = utterance;
