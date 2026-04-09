@@ -95,8 +95,12 @@ window.MdReader.tts = (function () {
       }
     }
     if (!restored) {
-      // Auto-select: first premium English, else first premium, else first English
+      // Auto-select: prefer en-GB, then any premium English, then any premium,
+      // then any English, then anything.
+      function isEnGB(e) { return /^en[-_]GB$/i.test(e.voice.lang); }
       var best =
+        premium.find(isEnGB) ||
+        standard.find(isEnGB) ||
         premium.find(function (e) { return isEnglish(e.voice); }) ||
         premium[0] ||
         standard.find(function (e) { return isEnglish(e.voice); }) ||
