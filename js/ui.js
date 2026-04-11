@@ -7,6 +7,10 @@ window.MdReader.ui = (function () {
     statusEl: document.getElementById("status"),
     pasteBtn: document.getElementById("pasteBtn"),
     loadBtn: document.getElementById("loadBtn"),
+    skipBackBtn: document.getElementById("skipBackBtn"),
+    skipFwdBtn: document.getElementById("skipFwdBtn"),
+    editBtn: document.getElementById("editBtn"),
+    downloadBtn: document.getElementById("downloadBtn"),
     speakBtn: document.getElementById("speakBtn"),
     pauseBtn: document.getElementById("pauseBtn"),
     resumeBtn: document.getElementById("resumeBtn"),
@@ -117,5 +121,18 @@ window.MdReader.ui = (function () {
     togglePlaylistPanel,
     hidePlaylistPanel,
     showBookDialog,
+    toggleEditMode,
   };
+
+  function toggleEditMode() {
+    var mainEl = document.querySelector("main");
+    var editing = mainEl.classList.toggle("editing");
+    if (editing) {
+      elements.editor.removeAttribute("hidden");
+      elements.editBtn.textContent = "Done";
+    } else {
+      elements.editor.setAttribute("hidden", "");
+      elements.editBtn.textContent = "Edit";
+    }
+  }
 })();

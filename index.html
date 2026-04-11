@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github-dark.min.css">
 
   <!-- App styles -->
-  <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=4">
 
   <!-- Highlight.js -->
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
@@ -34,6 +34,8 @@
     <button id="pauseBtn">Pause</button>
     <button id="resumeBtn">Resume</button>
     <button id="stopBtn">Stop</button>
+    <button id="skipBackBtn">&laquo; Back</button>
+    <button id="skipFwdBtn">Fwd &raquo;</button>
     <label class="auto-play-label">
       <input id="autoPlayToggle" type="checkbox"> Auto-play
     </label>
@@ -42,6 +44,11 @@
   <div class="group">
     <label for="voiceSelect">Voice</label>
     <select id="voiceSelect"></select>
+  </div>
+
+  <div class="group">
+    <button id="editBtn">Edit</button>
+    <button id="downloadBtn">Download</button>
   </div>
 
   <div class="group">
@@ -86,11 +93,11 @@
 </dialog>
 
 <!-- App scripts (order matters) -->
-<script src="js/ui.js?v=3"></script>
-<script src="js/markdown.js?v=3"></script>
-<script src="js/tts.js?v=3"></script>
-<script src="js/files.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/ui.js?v=4"></script>
+<script src="js/markdown.js?v=4"></script>
+<script src="js/tts.js?v=4"></script>
+<script src="js/files.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
 
 </body>
 </html>

@@ -270,6 +270,29 @@ window.MdReader.files = (function () {
     return playlist.length;
   }
 
+  function downloadMarkdown() {
+    var ui = window.MdReader.ui;
+    var text = ui.elements.editor.value;
+    if (!text.trim()) {
+      ui.setStatus("Nothing to download.");
+      return;
+    }
+    var title = ui.elements.editorTitle.textContent || "document";
+    var filename = title.replace(/[^a-zA-Z0-9_\- ]/g, "").trim() || "document";
+    if (!/\.md$/i.test(filename)) filename += ".md";
+
+    var blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    ui.setStatus("Downloaded: " + filename);
+  }
+
   return {
     handleFileSelect,
     loadSampleMarkdown,
@@ -280,6 +303,7 @@ window.MdReader.files = (function () {
     loadBookFromManifest,
     loadTasty,
     openBookPicker,
+    downloadMarkdown,
     loadPlaylistItem,
     hasNext,
     advanceToNext,

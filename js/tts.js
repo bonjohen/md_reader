@@ -356,6 +356,103 @@ window.MdReader.tts = (function () {
     return chunkIndex / totalChunks;
   }
 
+  // --- Section skip ---
+
+  function getSectionOffsets() {
+    var ui = window.MdReader.ui;
+    var headings = ui.elements.preview.querySelectorAll("h1,h2,h3,h4,h5,h6");
+    var fullText = getReadableText();
+    var offsets = [];
+    var searchFrom = 0;
+
+    for (var i = 0; i < headings.length; i++) {
+      var hText = headings[i].innerText.trim();
+      var pos = fullText.indexOf(hText, searchFrom);
+      if (pos !== -1) {
+        offsets.push({ charOffset: pos, element: headings[i] });
+        searchFrom = pos + hText.length;
+      }
+    }
+    return offsets;
+  }
+
+  function currentCharOffset() {
+    var offset = 0;
+    for (var i = 0; i < chunkIndex; i++) {
+      offset += chunkQueue[i].length;
+    }
+    return offset;
+  }
+
+  function chunkIndexForCharOffset(target) {
+    var offset = 0;
+    for (var i = 0; i < chunkQueue.length; i++) {
+      if (offset + chunkQueue[i].length > target) return i;
+      offset += chunkQueue[i].length;
+    }
+    return chunkQueue.length - 1;
+  }
+
+  function skipForward() {
+    var sections = getSectionOffsets();
+    if (!sections.length) return;
+
+    if (speaking) {
+      var cur = currentCharOffset();
+      var next = null;
+      for (var i = 0; i < sections.length; i++) {
+        if (sections[i].charOffset > cur) { next = sections[i]; break; }
+      }
+      if (!next) return; // already past last heading
+      chunkIndex = chunkIndexForCharOffset(next.charOffset);
+      window.speechSynthesis.cancel();
+      paused = false;
+      speakNextChunk();
+    } else {
+      scrollToNextHeading(1);
+    }
+  }
+
+  function skipBack() {
+    var sections = getSectionOffsets();
+    if (!sections.length) return;
+
+    if (speaking) {
+      var cur = currentCharOffset();
+      var prev = null;
+      for (var i = sections.length - 1; i >= 0; i--) {
+        if (sections[i].charOffset < cur - 10) { prev = sections[i]; break; }
+      }
+      if (!prev) prev = sections[0];
+      chunkIndex = chunkIndexForCharOffset(prev.charOffset);
+      window.speechSynthesis.cancel();
+      paused = false;
+      speakNextChunk();
+    } else {
+      scrollToNextHeading(-1);
+    }
+  }
+
+  function scrollToNextHeading(direction) {
+    var ui = window.MdReader.ui;
+    var headings = ui.elements.preview.querySelectorAll("h1,h2,h3,h4,h5,h6");
+    if (!headings.length) return;
+
+    var scrollTop = ui.elements.preview.scrollTop;
+    var found = null;
+
+    if (direction > 0) {
+      for (var i = 0; i < headings.length; i++) {
+        if (headings[i].offsetTop > scrollTop + 10) { found = headings[i]; break; }
+      }
+    } else {
+      for (var i = headings.length - 1; i >= 0; i--) {
+        if (headings[i].offsetTop < scrollTop - 10) { found = headings[i]; break; }
+      }
+    }
+    if (found) found.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return {
     loadVoices,
     speak,
@@ -366,5 +463,7 @@ window.MdReader.tts = (function () {
     isSpeaking,
     setOnFinished,
     getProgress,
+    skipForward,
+    skipBack,
   };
 })();

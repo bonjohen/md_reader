@@ -98,6 +98,21 @@ main > .panel {
   flex: 1;
 }
 
+/* --- Edit mode --- */
+
+main.editing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+main.editing #editor {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  order: -1;
+  border-right: 1px solid var(--border);
+}
+
 /* --- Panels --- */
 
 .panel {
@@ -409,6 +424,16 @@ textarea {
 /* --- Responsive --- */
 
 @media (max-width: 900px) {
+  main.editing {
+    grid-template-columns: 1fr;
+  }
+
+  main.editing #editor {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 40vh;
+  }
+
   .panel {
     border-right: none;
     border-bottom: 1px solid var(--border);

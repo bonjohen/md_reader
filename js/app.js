@@ -14,6 +14,14 @@ window.MdReader = window.MdReader || {};
   el.pasteBtn.addEventListener("click", files.pasteFromClipboard);
   el.loadBtn.addEventListener("click", files.openBookPicker);
 
+  // Skip controls
+  el.skipBackBtn.addEventListener("click", tts.skipBack);
+  el.skipFwdBtn.addEventListener("click", tts.skipForward);
+
+  // Edit / Download
+  el.editBtn.addEventListener("click", ui.toggleEditMode);
+  el.downloadBtn.addEventListener("click", files.downloadMarkdown);
+
   // Playlist sidebar close
   el.playlistCloseBtn.addEventListener("click", ui.hidePlaylistPanel);
 
