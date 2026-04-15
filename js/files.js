@@ -217,6 +217,7 @@ window.MdReader.files = (function () {
 
   // Registry of available books. Add more entries here as new books are added.
   var AVAILABLE_BOOKS = [
+    { title: "AI Sun", manifest: "docs/ai-sun/manifest.json" },
     { title: "Tasty", manifest: "docs/tasty/manifest.json" },
   ];
 

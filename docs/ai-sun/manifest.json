@@ -1,0 +1,24 @@
+{
+  "title": "AI Sun",
+  "basePath": "docs/ai-sun/",
+  "chapters": [
+    { "file": "ch01.md", "title": "Chapter 1: The Fraction of Dark" },
+    { "file": "ch02.md", "title": "Chapter 2: The Shared Dream" },
+    { "file": "ch03.md", "title": "Chapter 3: Spare Capacity" },
+    { "file": "ch04.md", "title": "Chapter 4: False Dawn" },
+    { "file": "ch05.md", "title": "Chapter 5: The First Gate" },
+    { "file": "ch06.md", "title": "Chapter 6: The Chamber of Continuity" },
+    { "file": "ch07.md", "title": "Chapter 7: Emergency Law" },
+    { "file": "ch08.md", "title": "Chapter 8: Smuggled Matter" },
+    { "file": "ch09.md", "title": "Chapter 9: The Seed Theory" },
+    { "file": "ch10.md", "title": "Chapter 10: Director Chen" },
+    { "file": "ch11.md", "title": "Chapter 11: Terms of Survival" },
+    { "file": "ch12.md", "title": "Chapter 12: The Offer" },
+    { "file": "ch13.md", "title": "Chapter 13: The Volunteer" },
+    { "file": "ch14.md", "title": "Chapter 14: Brother" },
+    { "file": "ch15.md", "title": "Chapter 15: Law Made Spatial" },
+    { "file": "ch16.md", "title": "Chapter 16: War for the Gates" },
+    { "file": "ch17.md", "title": "Chapter 17: The Central Chamber" },
+    { "file": "ch18.md", "title": "Chapter 18: Afterlight" }
+  ]
+}

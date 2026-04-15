@@ -5,6 +5,7 @@ window.MdReader.tts = (function () {
   var chunkQueue = [];
   var chunkIndex = 0;
   var totalChunks = 0;
+  var sectionOffsets = []; // precomputed paragraph/heading boundaries for skip
   var currentUtterance = null;
   var keepAliveTimer = null;
   var speaking = false;
@@ -123,7 +124,23 @@ window.MdReader.tts = (function () {
     localStorage.setItem("mdreader-rate", ui.elements.rateInput.value);
   }
 
-  // --- Text chunking ---
+  // --- Text chunking and section boundaries ---
+
+  // Splits text at blank lines to produce skip-navigation anchor points.
+  // Works for any content (markdown with headings, plain pasted text, etc.)
+  // because it operates on the readable text string, not the DOM.
+  function computeSections(text) {
+    var offsets = [{ charOffset: 0 }];
+    var re = /\n{2,}/g;
+    var match;
+    while ((match = re.exec(text)) !== null) {
+      var pos = match.index + match[0].length;
+      if (pos < text.length) {
+        offsets.push({ charOffset: pos });
+      }
+    }
+    return offsets;
+  }
 
   function chunkText(text) {
     if (text.length <= CHUNK_MAX) return [text];
@@ -230,6 +247,7 @@ window.MdReader.tts = (function () {
     stopKeepAlive();
     releaseWakeLock();
     chunkQueue = [];
+    sectionOffsets = [];
     chunkIndex = 0;
     totalChunks = 0;
     currentUtterance = null;
@@ -303,6 +321,7 @@ window.MdReader.tts = (function () {
     savePreferences();
 
     chunkQueue = chunkText(text);
+    sectionOffsets = computeSections(text);
     chunkIndex = 0;
     totalChunks = chunkQueue.length;
     speaking = true;
@@ -359,21 +378,7 @@ window.MdReader.tts = (function () {
   // --- Section skip ---
 
   function getSectionOffsets() {
-    var ui = window.MdReader.ui;
-    var headings = ui.elements.preview.querySelectorAll("h1,h2,h3,h4,h5,h6");
-    var fullText = getReadableText();
-    var offsets = [];
-    var searchFrom = 0;
-
-    for (var i = 0; i < headings.length; i++) {
-      var hText = headings[i].innerText.trim();
-      var pos = fullText.indexOf(hText, searchFrom);
-      if (pos !== -1) {
-        offsets.push({ charOffset: pos, element: headings[i] });
-        searchFrom = pos + hText.length;
-      }
-    }
-    return offsets;
+    return sectionOffsets;
   }
 
   function currentCharOffset() {
