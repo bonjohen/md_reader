@@ -18,7 +18,6 @@ window.MdReader.ui = (function () {
     voiceSelect: document.getElementById("voiceSelect"),
     rateInput: document.getElementById("rateInput"),
     rateValue: document.getElementById("rateValue"),
-    autoPlayToggle: document.getElementById("autoPlayToggle"),
     playlistPanel: document.getElementById("playlistPanel"),
     playlistList: document.getElementById("playlistList"),
     playlistCloseBtn: document.getElementById("playlistCloseBtn"),
@@ -122,6 +121,8 @@ window.MdReader.ui = (function () {
     hidePlaylistPanel,
     showBookDialog,
     toggleEditMode,
+    setTtsState,
+    isEditMode,
   };
 
   function toggleEditMode() {
@@ -134,5 +135,15 @@ window.MdReader.ui = (function () {
       elements.editor.setAttribute("hidden", "");
       elements.editBtn.textContent = "Edit";
     }
+  }
+
+  function setTtsState(state) {
+    var header = document.querySelector("header");
+    header.classList.remove("tts-idle", "tts-playing", "tts-paused");
+    header.classList.add("tts-" + state);
+  }
+
+  function isEditMode() {
+    return document.querySelector("main").classList.contains("editing");
   }
 })();

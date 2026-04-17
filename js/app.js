@@ -20,16 +20,31 @@ window.MdReader = window.MdReader || {};
 
   // Edit / Download
   el.editBtn.addEventListener("click", ui.toggleEditMode);
-  el.downloadBtn.addEventListener("click", files.downloadMarkdown);
+  el.downloadBtn.addEventListener("click", function () {
+    files.downloadMarkdown();
+    if (ui.isEditMode()) ui.toggleEditMode();
+  });
 
   // Playlist sidebar close
   el.playlistCloseBtn.addEventListener("click", ui.hidePlaylistPanel);
 
   // TTS controls
-  el.speakBtn.addEventListener("click", tts.speak);
-  el.pauseBtn.addEventListener("click", tts.pauseSpeech);
-  el.resumeBtn.addEventListener("click", tts.resumeSpeech);
-  el.stopBtn.addEventListener("click", tts.stopSpeech);
+  el.speakBtn.addEventListener("click", function () {
+    tts.speak();
+    ui.setTtsState("playing");
+  });
+  el.pauseBtn.addEventListener("click", function () {
+    tts.pauseSpeech();
+    ui.setTtsState("paused");
+  });
+  el.resumeBtn.addEventListener("click", function () {
+    tts.resumeSpeech();
+    ui.setTtsState("playing");
+  });
+  el.stopBtn.addEventListener("click", function () {
+    tts.stopSpeech();
+    ui.setTtsState("idle");
+  });
 
   // Rate slider
   el.rateInput.addEventListener("input", function () {
@@ -37,18 +52,23 @@ window.MdReader = window.MdReader || {};
     tts.savePreferences();
   });
 
-  // Voice selection persistence
-  el.voiceSelect.addEventListener("change", tts.savePreferences);
+  // Voice selection — save and immediately apply if speaking
+  el.voiceSelect.addEventListener("change", function () {
+    tts.savePreferences();
+    tts.applyVoiceChange();
+  });
 
   // Auto-advance: when TTS finishes a file and auto-play is on, load next file and speak.
   // Chained on the load promise so we never speak stale editor content (race that
   // caused the same chapter to replay when fetch was slower than the fixed delay).
   tts.setOnFinished(function () {
     ui.setProgress(1);
-    if (el.autoPlayToggle.checked && files.hasNext()) {
+    if (files.hasNext()) {
       files.advanceToNext().then(function (loaded) {
         if (loaded) tts.speak();
       });
+    } else {
+      ui.setTtsState("idle");
     }
   });
 
@@ -63,6 +83,15 @@ window.MdReader = window.MdReader || {};
   window.speechSynthesis.onvoiceschanged = tts.loadVoices;
   tts.loadVoices();
 
+
+  // Keyboard shortcuts
+  document.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+      e.preventDefault();
+      files.downloadMarkdown();
+      if (ui.isEditMode()) ui.toggleEditMode();
+    }
+  });
 
   // Initial render
   md.renderToPreview();

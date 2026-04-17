@@ -458,6 +458,19 @@ window.MdReader.tts = (function () {
     if (found) found.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  // Called when the user changes the voice mid-speech. Cancels the current
+  // utterance and re-speaks from the same chunk so the new voice is heard
+  // immediately rather than waiting for the next utterance boundary.
+  function applyVoiceChange() {
+    if (!speaking || paused) return;
+    window.speechSynthesis.cancel();
+    if (IS_ANDROID) {
+      setTimeout(speakNextChunk, NEXT_CHUNK_DELAY_MS);
+    } else {
+      speakNextChunk();
+    }
+  }
+
   return {
     loadVoices,
     speak,
@@ -470,5 +483,6 @@ window.MdReader.tts = (function () {
     getProgress,
     skipForward,
     skipBack,
+    applyVoiceChange,
   };
 })();

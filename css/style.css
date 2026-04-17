@@ -65,6 +65,18 @@ button:focus-visible, select:focus-visible, input:focus-visible {
   outline-offset: 2px;
 }
 
+/* --- TTS state-driven button visibility --- */
+
+header.tts-idle    #pauseBtn,
+header.tts-idle    #resumeBtn,
+header.tts-idle    #stopBtn   { display: none; }
+
+header.tts-playing #speakBtn,
+header.tts-playing #resumeBtn { display: none; }
+
+header.tts-paused  #speakBtn,
+header.tts-paused  #pauseBtn  { display: none; }
+
 /* --- Progress bar --- */
 
 #progressBar {
@@ -307,18 +319,6 @@ textarea {
   white-space: nowrap;
 }
 
-/* --- Auto-play toggle --- */
-
-.auto-play-label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-}
-
-.auto-play-label input[type="checkbox"] {
-  accent-color: var(--accent);
-}
 
 /* --- Book dialog --- */
 
