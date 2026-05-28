@@ -147,7 +147,7 @@ window.MdReader.ui = (function () {
           }
           if (!target || target === preview) target = node.parentElement;
           if (target) {
-            var top = target.offsetTop - preview.offsetTop;
+            var top = target.offsetTop;
             preview.scrollTo({ top: top, behavior: "smooth" });
           }
           return;

@@ -167,6 +167,7 @@ textarea {
   flex: 1;
   overflow: auto;
   padding: 24px;
+  position: relative;
 }
 
 #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 {
